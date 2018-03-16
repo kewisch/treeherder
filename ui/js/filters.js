@@ -42,17 +42,6 @@ treeherder.filter('linkifyBugs', function () {
     };
 });
 
-treeherder.filter('highlightLogLine', function () {
-    return function (logLine) {
-        const parts = logLine.split(" | ", 3);
-        if (parts[0].startsWith("TEST-UNEXPECTED")) {
-            parts[0] = "<strong class='failure-line-status'>" + parts[0] + "</strong>";
-            parts[1] = "<strong>" + parts[1] + "</strong>";
-        }
-        return parts.join(" | ");
-    };
-});
-
 treeherder.filter('highlightCommonTerms', function () {
     return function (input) {
         const compareStr = Array.prototype.slice.call(arguments, 1).filter(

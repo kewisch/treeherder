@@ -24,16 +24,18 @@ export const escapeHTML = function escapeHTML(text) {
 };
 
 export const highlightCommonTerms = function highlightCommonTerms(input, compareStr) {
-  const tokens = compareStr.split(/[^a-zA-Z0-9_-]+/);
+  if (input && compareStr) {
+    const tokens = compareStr.split(/[^a-zA-Z0-9_-]+/);
 
-  tokens.sort((a, b) => (b.length - a.length));
-  tokens.forEach((elem) => {
-    if (elem.length > 0) {
-      input = input.replace(
-        new RegExp(`(^|\\W)(${elem})($|\\W)`, 'gi'),
-        (match, prefix, token, suffix) => `${prefix}<strong>${token}</strong>${suffix}`
-      );
-    }
-  });
+    tokens.sort((a, b) => (b.length - a.length));
+    tokens.forEach((elem) => {
+      if (elem.length > 0) {
+        input = input.replace(
+          new RegExp(`(^|\\W)(${elem})($|\\W)`, 'gi'),
+          (match, prefix, token, suffix) => `${prefix}<strong>${token}</strong>${suffix}`
+        );
+      }
+    });
+  }
   return input;
 };

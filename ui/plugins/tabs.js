@@ -22,7 +22,7 @@ treeherder.factory('thTabs', [
                     title: "Failure Classification",
                     description: "intermittent classification interface",
                     content: "plugins/auto_classification/main.html",
-                    enabled: false
+                    enabled: true
                 },
                 annotations: {
                     title: "Annotations",
