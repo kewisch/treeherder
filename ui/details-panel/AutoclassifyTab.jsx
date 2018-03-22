@@ -167,22 +167,22 @@ class AutoclassifyTab extends React.Component {
    * @param {number[]} lineIds - ids of the lines to toggle
    * @param {boolean} clear - Clear the current selection before selecting new elements
    */
-  onToggleSelect(lineIds, clear) {
-    const isSelected = lineIds
-      .reduce((map, lineId) => map.set(lineId, this.selectedLineIds.has(lineId)),
-              new Map());
-    if (clear) {
-      this.selectedLineIds.clear();
-    }
-    lineIds.forEach((lineId) => {
-      const line = this.state.linesById.get(lineId);
-      if (isSelected.get(lineId)) {
-        this.selectedLineIds.delete(lineId);
-      } else if (!line.verified) {
-        this.selectedLineIds.add(lineId);
-      }
-    });
-  }
+  // onToggleSelect(lineIds, clear) {
+  //   const isSelected = lineIds
+  //     .reduce((map, lineId) => map.set(lineId, this.selectedLineIds.has(lineId)),
+  //             new Map());
+  //   if (clear) {
+  //     this.selectedLineIds.clear();
+  //   }
+  //   lineIds.forEach((lineId) => {
+  //     const line = this.state.linesById.get(lineId);
+  //     if (isSelected.get(lineId)) {
+  //       this.selectedLineIds.delete(lineId);
+  //     } else if (!line.verified) {
+  //       this.selectedLineIds.add(lineId);
+  //     }
+  //   });
+  // }
 
   onToggleEditable() {
     const selectedIds = Array.from(this.selectedLineIds);
@@ -548,7 +548,7 @@ class AutoclassifyTab extends React.Component {
       return;
     }
     console.log("toggling select", errorLine);
-
+    // TODO: need to remove if clicked errorLine already selected
     if (event.ctrlKey || event.metaKey) {
       this.setState({ selectedLines: {
         ...this.state.selectedLines,
