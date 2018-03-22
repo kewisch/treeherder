@@ -110,6 +110,7 @@ LOGOUT_REDIRECT_URL = '/'
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.postgres',
     # Disable Django's own staticfiles handling in favour of WhiteNoise, for
     # greater consistency between gunicorn and `./manage.py runserver`.
     'whitenoise.runserver_nostatic',
@@ -560,6 +561,14 @@ GITHUB_CLIENT_SECRET = env("GITHUB_CLIENT_SECRET", default=None)
 # ...which django-environ converts into the Django DB settings dict format.
 DATABASES = {
     'default': env.db_url('DATABASE_URL'),
+    'pg': {
+        'NAME': 'treeherder',
+        'ENGINE': 'django.db.backends.postgresql',
+        'USER': 'treeherder',
+        'PASSWORD': 'treeherder',
+        'HOST': 'localhost',
+        'OPTIONS': {},
+    }
 }
 
 # We're intentionally not using django-environ's query string options feature,
@@ -568,11 +577,14 @@ DATABASES = {
 for alias in DATABASES:
     # Persist database connections for 5 minutes, to avoid expensive reconnects.
     DATABASES[alias]['CONN_MAX_AGE'] = 300
-    DATABASES[alias]['OPTIONS'] = {
-        # Override Django's default connection charset of 'utf8', otherwise it's
-        # still not possible to insert non-BMP unicode into utf8mb4 tables.
-        'charset': 'utf8mb4',
-    }
+
+    if 'mysql' in DATABASES[alias]['ENGINE']:
+        DATABASES[alias]['OPTIONS'] = {
+            # Override Django's default connection charset of 'utf8', otherwise it's
+            # still not possible to insert non-BMP unicode into utf8mb4 tables.
+            'charset': 'utf8mb4',
+        }
+
     if DATABASES[alias]['HOST'] != 'localhost':
         # Use TLS when connecting to RDS.
         DATABASES[alias]['OPTIONS']['ssl'] = {

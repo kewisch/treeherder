@@ -135,6 +135,44 @@ mysql -u root -e 'CREATE DATABASE IF NOT EXISTS treeherder'
 echo '-----> Waiting for Elasticsearch to be ready'
 while ! curl "$ELASTICSEARCH_URL" &> /dev/null; do sleep 1; done
 
+echo '-----> Installing Postgres'
+PG_VERSION=10
+
+PG_REPO_APT_SOURCE=/etc/apt/sources.list.d/pgdg.list
+if [ ! -f "$PG_REPO_APT_SOURCE" ]; then
+  # Add PG apt repo:
+  echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee "$PG_REPO_APT_SOURCE"
+
+  # Add PGDG repo key:
+  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+fi
+sudo -E apt-get -yqq update
+sudo -E apt-get -yqq install "postgresql-$PG_VERSION" "postgresql-contrib-$PG_VERSION"
+
+echo '-----> Configuring PostgreSQL'
+# Edit the following to change the version of PostgreSQL that is installed
+PG_CONF="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
+PG_HBA="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
+
+# Edit postgresql.conf to change listen address to '*':
+sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "$PG_CONF"
+
+# Append to pg_hba.conf to add password auth:
+echo "host    all             all             all                     md5" | sudo tee -a "$PG_HBA"
+
+# Explicitly set default client_encoding
+echo "client_encoding = utf8" | sudo tee -a "$PG_CONF"
+
+# Restart so that all new config is loaded:
+sudo systemctl restart postgresql
+
+sudo -u postgres psql -c "CREATE USER treeherder WITH PASSWORD 'treeherder';"
+sudo -u postgres psql -c "CREATE DATABASE treeherder WITH OWNER=treeherder
+                                                          LC_COLLATE='en_US.utf8'
+                                                          LC_CTYPE='en_US.utf8'
+                                                          ENCODING='UTF8'
+                                                          TEMPLATE=template0;"
+
 echo '-----> Running Django migrations and loading reference data'
 # Redirect stderr to stdout, to prevent the harmless "InnoDB rebuilding table" warning
 # from causing confusion due to being shown in red. Remove when bug 1389548 fixed.
