@@ -317,6 +317,21 @@ export default class ErrorLine extends React.Component {
   }
 
   /**
+   * Update internal line state after it is changed in the UI
+   * @param {number} lineId - id of the TextLogError
+   * @param {string} type - Type of classification
+   * @param {?number} classifiedFailureId - id of classified failure
+   * @param {?bugNumber} bugNumber - id of bug
+   */
+  // TODO: handle in ErrorLine
+  onUpdateLine(lineId, type, classifiedFailureId, bugNumber) {
+    const state = this.stateByLine.get(lineId);
+    state.type = type;
+    state.classifiedFailureId = classifiedFailureId;
+    state.bugNumber = bugNumber;
+  }
+
+  /**
    * Return a function that takes a classified failure id and returns the
    * matcher that provided the best match, and the score of that match.
    */

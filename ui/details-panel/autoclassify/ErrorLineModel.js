@@ -24,5 +24,12 @@ export default class ErrorLineModel {
       this.bestClassification === null);
     this.bugSummary = (this.bestClassification && this.bestClassification.bug) ?
       this.bestClassification.bug.summary : null;
+
+    // the user changes to be saved
+    this.state = {
+      classifiedFailureId: null,
+      bugNumber: null,
+      type: null
+    };
   }
 }

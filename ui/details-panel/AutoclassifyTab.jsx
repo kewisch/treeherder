@@ -37,7 +37,6 @@ class AutoclassifyTab extends React.Component {
     // Not reflected in render, so don't belong in state
     this.pendingLines = {};
 
-    this.toggleSelect = this.toggleSelect.bind(this);
     // this.requestPromise = null;
   }
 
@@ -79,17 +78,19 @@ class AutoclassifyTab extends React.Component {
   }
 
   componentDidMount() {
+    // TODO: Once we're not using ng-react any longer and
+    // are hosted completely in React, then try moving this
+    // .bind to the constructor.
+    this.toggleSelect = this.toggleSelect.bind(this);
+    this.jobChanged = this.jobChanged.bind(this);
+
     // Load the data here
-    // console.log("job", this.props.job);
     if (this.props.job.id) {
       this.fetchErrorData();
     // } else {
-    //   console.log("no job yet");
+    //   this.jobChanged();
     }
-    //   .then(data => this.buildLines(data))
-    //   .catch(() => {
-    //     this.setState({ loadStatus: "error" });
-    //   });
+
 
   }
 
@@ -105,8 +106,8 @@ class AutoclassifyTab extends React.Component {
     // console.log("did update job", this.props.job.id);
     if (this.props.job.id !== prevProps.job.id) {
       this.fetchErrorData();
-    // } else {
-    //   console.log("no job yet willUpdate");
+    // } else if (this.state.loadStatus !== 'loading') {
+    //   this.jobChanged();
     }
   }
 
@@ -146,20 +147,6 @@ class AutoclassifyTab extends React.Component {
   onPin() {
     //TODO: consider whether this should add bugs or mark all lines as ignored
     this.thPinboard.pinJob(this.job);
-  }
-
-  /**
-   * Update internal line state after it is changed in the UI
-   * @param {number} lineId - id of the TextLogError
-   * @param {string} type - Type of classification
-   * @param {?number} classifiedFailureId - id of classified failure
-   * @param {?bugNumber} bugNumber - id of bug
-   */
-  onUpdateLine(lineId, type, classifiedFailureId, bugNumber) {
-    const state = this.stateByLine.get(lineId);
-    state.type = type;
-    state.classifiedFailureId = classifiedFailureId;
-    state.bugNumber = bugNumber;
   }
 
   /**
@@ -482,23 +469,24 @@ class AutoclassifyTab extends React.Component {
   // }
 
   /**
-   * (Re)build all the panel contents with fresh data
+   * Update the panel for a new job selection
    */
-  build() {
+  jobChanged() {
     const { autoclassifyStatus, hasLogs, logsParsed, logParseStatus, job } = this.props;
     const { loadStatus, autoclassifyStatusOnLoad } = this.state;
 
+    let newLoadStatus = 'loading';
     if (job.state === "pending" || job.state === "running") {
-      this.setState({ loadStatus: "job_pending" });
+      newLoadStatus = "job_pending";
     } else if (!logsParsed || autoclassifyStatus === "pending") {
-      this.setState({ loadStatus: "pending" });
+      newLoadStatus = "pending";
     } else if (logParseStatus === 'failed') {
-      this.setState({ loadStatus: "failed" });
+      newLoadStatus = "failed";
     } else if (!hasLogs) {
-      this.setState({ loadStatus: "no_logs" });
+      newLoadStatus = "no_logs";
     } else if (autoclassifyStatusOnLoad === null || autoclassifyStatusOnLoad === "cross_referenced") {
       if (loadStatus !== "ready") {
-        this.setState({ loadStatus: "loading" });
+        newLoadStatus = "loading";
       }
       this.fetchErrorData()
         .then(data => this.buildLines(data))
@@ -506,36 +494,30 @@ class AutoclassifyTab extends React.Component {
           this.setState({ loadStatus: "error" });
         });
     }
-  }
 
-  /**
-   * Update the panel for a new job selection
-   */
-  jobChanged() {
     this.setState({
-      loadStatus: "loading",
-      linesById: new Map(),
-      // selectedLineIds: new Set(),
-      // editableLineIds: new Set(),
+      loadStatus: newLoadStatus,
+      // linesById: new Map(),
+      selectedLines: {},
+      selectableLines: {},
       stateByLine: new Map(),
       autoclassifyStatusOnLoad: null,
     });
-    this.build();
   }
 
-  $onChanges(changes) {
-    const changed = x => changes.hasOwnProperty(x);
-
-    if (changed("job")) {
-      if (this.job.id) {
-        this.jobChanged();
-      }
-    } else if (changed("hasLogs") || changed("logsParsed") ||
-      changed("logParseStatus") || changed("autoclassifyStatus")) {
-      this.build();
-    }
-  }
-
+  // $onChanges(changes) {
+  //   const changed = x => changes.hasOwnProperty(x);
+  //
+  //   if (changed("job")) {
+  //     if (this.job.id) {
+  //       this.jobChanged();
+  //     }
+  //   } else if (changed("hasLogs") || changed("logsParsed") ||
+  //     changed("logParseStatus") || changed("autoclassifyStatus")) {
+  //     this.build();
+  //   }
+  // }
+  //
   /**
    * Toggle the selection of a ErrorLine, if the click didn't happen on an interactive
    * element child of that line.
@@ -543,35 +525,36 @@ class AutoclassifyTab extends React.Component {
   toggleSelect(event, errorLine) {
     const elem = $(event.target);
     const interactive = new Set(["INPUT", "BUTTON", "TEXTAREA", "A"]);
+
     if (interactive.has(elem.prop("tagName"))) {
-      console.log("nosir");
       return;
     }
-    console.log("toggling select", errorLine);
-    // TODO: need to remove if clicked errorLine already selected
+
+    const { selectedLines } = this.state;
+    const newId = `${errorLine.id}`;
+    let newSelectedLines = { [newId]: errorLine };
+
     if (event.ctrlKey || event.metaKey) {
-      this.setState({ selectedLines: {
-        ...this.state.selectedLines,
-        [`${errorLine.id}`]: errorLine
-      } });
-    } else {
-      this.setState({ selectedLines: { [`${errorLine.id}`]: errorLine } });
+      if (newId in selectedLines) {
+        // remove it from selection
+        newSelectedLines = { ...selectedLines };
+        delete newSelectedLines[newId];
+      } else {
+        // add it to selection
+        newSelectedLines = { ...selectedLines, [newId]: errorLine };
+      }
     }
-
-    // this.props.onToggleSelect({ lineIds: [id], clear: !event.ctrlKey && !event.metaKey });
+    this.setState({ selectedLines: newSelectedLines });
   }
-
 
   render() {
     const { job, autoclassifyStatus, user, $injector } = this.props;
     const { errorLines, loadStatus, selectedLines } = this.state;
     const loadStatusText = this.getLoadStatusText();
     const canClassify = this.user ? this.user.loggedin && this.user.is_staff : false;
-    // console.log("render error lines", errorLines);
     // const pendingLines = errorLines.reduce((pending, line) => (
     //   line.verified === false ? { ...pending, [line.id]: line } : pending
     // ), {});
-    console.log("selected", selectedLines);
     return (
       <span className="autoclassify-tab">
         <span className="hidden" />
